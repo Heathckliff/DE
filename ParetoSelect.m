@@ -7,7 +7,7 @@ function [winner] = ParetoSelect(fv_Obj_baby,fv_Obj,fv_Con_baby,fv_Con,ObjInfo)
 %       fv_Con:         (NoIeq+NoEq)-by-NoP parent's constrain matrix.
 %       ObjInfo:        1-by-1 struct contains problem information.
 % Output:
-%       winner:         NoD-by-NoP logical matrix indicates who is allowed
+%       winner:         1-by-NoP logical matrix indicates who is allowed
 %                       to enter the next generation. TRUE means baby win,
 %                       and FALSE means parent win.
 
@@ -53,5 +53,6 @@ else% Unconstrained Problem
     rc = sum(fv_Obj_baby <= fv_Obj,1) == NoObj;
     rc_best(rc) = true;
 end
-    winner = ones(NoD,1)*rc_best == 1;
+%     winner = ones(NoD,1)*rc_best == 1;
+    winner = rc_best;
 end

@@ -24,11 +24,11 @@ DeInfo = struct('FunObjName', 'ObjfunModel',...
                 'NBest',5);
 
 figure(1); hold on; grid on; box on
-for i = 1:1000
-[x_parent,fv_Obj,fv_Con,ExitFlag] = DE(DeInfo,0);
+for i = 1:100
+[x_parent,fv_Obj,fv_Con,ExitFlag] = DE(DeInfo,[],0);
 plot(x_parent(1,:),x_parent(2,:),'.')
 end
-
+%%
 % Find the minimum value of function f(x,y) = x^2 + y^2
 clear;  clc
 
@@ -44,5 +44,5 @@ DeInfo = struct('FunObjName', 'ObjfunExample',...
                 'TargetToBestFactor',0.5,...
                 'NBest',5);
             
-[x_parent,fv_Obj,fv_Con,ExitFlag] = DE(DeInfo,1);
+[x_parent,fv_Obj,fv_Con,ExitFlag] = DE(DeInfo,[],1);
 

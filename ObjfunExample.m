@@ -1,4 +1,4 @@
-function [fv_Obj, fv_Con, InformToExit, ObjInfo] = ObjfunExample(x_pop)
+function [fv_Obj, fv_Con, InformToExit, ObjInfo] = ObjfunExample(x_pop,ObjInfo)
 % Just an example!
 % Input:
 %       x_pop:      NoD-by-NoP population matrix.

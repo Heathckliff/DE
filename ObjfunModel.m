@@ -1,4 +1,4 @@
-function [fv_Obj, fv_Con, InformToExit, ObjInfo] = ObjfunModel(x_pop)
+function [fv_Obj, fv_Con, InformToExit, ObjInfo] = ObjfunModel(x_pop,ObjInfo)
 % Problem definnning, put your problem mathmatical description here!
 % Input:
 %       x_pop:      NoD-by-NoP population matrix.

@@ -1,4 +1,4 @@
-function [x_parent,fv_Obj,fv_Con,ExitFlag] = DE(DeInfo,PlotIt)
+function [x_parent,fv_Obj,fv_Con,InformToExit,ExitFlag] = DE(DeInfo,datapath,PlotIt)
 % Defferential Evolution Optimization Toolbox.
 % Problem can be solved:
 %   1. Unconstrained sigle/multiple object optimization.
@@ -29,6 +29,10 @@ function [x_parent,fv_Obj,fv_Con,ExitFlag] = DE(DeInfo,PlotIt)
 %                   option must be set a value between (0,1).
 %       NBest:      If 'ScaleFactorStrategy' set to 'n-best', NBest must be
 %                   set to an integer value <= NoP.
+%       datapath:   If 'datapath' is [], DE will start with a randomly
+%                   initialized population; otherwise, DE will proceed with
+%                   with the provided population pointed by datapath.
+%       PlotIt:     If PlotIt != 0, plot DE process.
 % Output:
 %       x_parent:   NoD-by-NoP population matrix of the last generation.
 %       fv_Obj:     NoObj-by-NoP object function values of the last 
@@ -70,20 +74,24 @@ NoEq = ObjInfo.NoEq;            % Number of Equalilty constrains
 x_b_min = ObjInfo.x_b_min;
 x_b_max = ObjInfo.x_b_max;
 %% Initialization population
-fprintf('   # Initialization...\n')
-rng('shuffle');
-x_parent = zeros(NoD,NoP);
-for kk = 1:NoD
-    x_parent(kk,:) = x_b_min(kk) + (x_b_max(kk) - x_b_min(kk)).*rand(1,NoP);
-end
+if isempty(datapath)
+    fprintf('   # Initialization...\n')
+    rng('shuffle');
+    x_parent = zeros(NoD,NoP);
+    for kk = 1:NoD
+        x_parent(kk,:) = x_b_min(kk) + (x_b_max(kk) - x_b_min(kk)).*rand(1,NoP);
+    end
 
-fprintf('   # Evaluate Objfun(initialize)...\n')
-[fv_Obj, fv_Con] = feval(FunObjName, x_parent);
-if NoEq >= 1
-    fv_Con(NoIeq+1:NoIeq+NoEq,:) = abs(fv_Con(NoIeq+1:NoIeq+NoEq,:)) - EqErr;
+    fprintf('   # Evaluate Objfun(initialize)...\n')
+    [fv_Obj, fv_Con] = feval(FunObjName, x_parent, ObjInfo);
+    if NoEq >= 1
+        fv_Con(NoIeq+1:NoIeq+NoEq,:) = abs(fv_Con(NoIeq+1:NoIeq+NoEq,:)) - EqErr;
+    end
+    rc1 = fv_Con <= 0;
+    fv_Con(rc1) = 0;
+else
+    load(datapath,'-mat')
 end
-rc1 = fv_Con <= 0;
-fv_Con(rc1) = 0;
 %% The Main Cycle
 fprintf('   # DE Main Cycle...\n')
 jj = 1;
@@ -133,7 +141,7 @@ else                        % Arithmetic Recombination
             0.5.*(F_j + 1).*(x_parent(:,[r(2)+1:end,1:r(2)]) + ...
             x_parent(:,[r(3)+1:end,1:r(3)]) - 2.*x_base);
 end
-% Evaluate Boundary constrains
+% Evaluate Boundary constrains(Bounce-Back)
 for kk = 1:NoD
     rc1 = x_mut(kk,:) < x_b_min(kk);
     x_mut(kk,rc1) = 0.5.*(x_base(kk,rc1) + x_b_min(kk));
@@ -151,7 +159,7 @@ idx1 = sub2ind(size(x_baby),randi(NoD,1,NoP),1:NoP);
 x_baby(idx1) = x_mut(idx1);
 
 fprintf('   # Evaluate Objfun(baby)...\n')
-[fv_Obj_baby, fv_Con_baby] = feval(FunObjName, x_baby);
+[fv_Obj_baby, fv_Con_baby] = feval(FunObjName, x_baby, ObjInfo);
 if NoEq >= 1
     fv_Con_baby(NoIeq+1:NoIeq+NoEq,:) = abs(fv_Con_baby(NoIeq+1:NoIeq+NoEq,:)) - EqErr;
 end
@@ -160,10 +168,18 @@ fv_Con_baby(rc1) = 0;
 %% Selection for next generation
 fprintf('   # Evaluate ParetoSelect...\n')
 rc1 = ParetoSelect(fv_Obj_baby,fv_Obj,fv_Con_baby,fv_Con,ObjInfo);
-x_parent(rc1) = x_baby(rc1);
+x_parent(:,rc1) = x_baby(:,rc1);
+
+sum_rc1 = sum(rc1);
 
 fprintf('   # Evaluate Objfun(nextGen)...\n')
-[fv_Obj, fv_Con, InformToExit] = feval(FunObjName,x_parent);
+if NoObj >= 1 && (NoIeq+NoEq) >= 1 && (sum_rc1 ~= 0)
+    [fv_Obj(:,rc1), fv_Con(:,rc1), InformToExit] = feval(FunObjName, x_parent(:,rc1), ObjInfo);
+elseif NoObj >= 1 && (NoIeq+NoEq) == 0 && (sum_rc1 ~= 0)
+    [fv_Obj(:,rc1), fv_Con, InformToExit] = feval(FunObjName, x_parent(:,rc1), ObjInfo);
+elseif NoObj == 0 && (NoIeq+NoEq) >= 1 && (sum_rc1 ~= 0)
+    [fv_Obj, fv_Con(:,rc1), InformToExit] = feval(FunObjName, x_parent(:,rc1), ObjInfo);
+end
 if NoEq >= 1
     fv_Con(NoIeq+1:NoIeq+NoEq,:) = abs(fv_Con(NoIeq+1:NoIeq+NoEq,:)) - EqErr;
 end
@@ -171,11 +187,13 @@ rc1 = fv_Con <= 0;
 fv_Con(rc1) = 0;
 %% Output section
 if NoObj >= 1
-    norm_fv_Obj = max(abs(fv_Obj),[],2);
+%     norm_fv_Obj = max(abs(fv_Obj),[],2);
+    norm_fv_Obj = mean(fv_Obj,2)./[5e5;1e3];
+%     norm_fv_Obj = mean(fv_Obj,2)./1000;
     fprintf('           normInf(Obj_f%02d) = %e\n', [1:NoObj; norm_fv_Obj'])
     %
     if PlotIt
-        figure(1); hold on; grid on; zoom on; box on;
+        figure(1); hold on; grid on; box on;
         ax = gca;
         ax.ColorOrderIndex = 1;
         plot(jj,norm_fv_Obj,'o');
@@ -187,11 +205,11 @@ else
     %
     if PlotIt
         if NoD >= 2
-            figure(1); hold on; grid on; zoom on; box on;
+            figure(1); hold on; grid on; box on;
             plot(x_parent(1,:),x_parent(2,:),'.');
             drawnow
         else
-            figure(1); hold on; grid on; zoom on; box on;
+            figure(1); hold on; grid on; box on;
             plot(x_parent,'.');
             drawnow
         end
@@ -211,5 +229,6 @@ elseif NoObj == 0 && (sum(sum(fv_Con <= 0,1))/NoP == (NoIeq + NoEq))
                             % constrains are met
     ExitFlag = 2;
     return
+elseif norm_fv_Obj(1)
 end
 end
