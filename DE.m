@@ -73,6 +73,7 @@ NoIeq = ObjInfo.NoIeq;          % Number of Inequality constrains
 NoEq = ObjInfo.NoEq;            % Number of Equalilty constrains
 x_b_min = ObjInfo.x_b_min;
 x_b_max = ObjInfo.x_b_max;
+ScaleObjFunVal = ObjInfo.ScaleObjFunVal;
 %% Initialization population
 if isempty(datapath)
     fprintf('   # Initialization...\n')
@@ -188,8 +189,7 @@ fv_Con(rc1) = 0;
 %% Output section
 if NoObj >= 1
 %     norm_fv_Obj = max(abs(fv_Obj),[],2);
-    norm_fv_Obj = mean(fv_Obj,2)./[5e5;1e3];
-%     norm_fv_Obj = mean(fv_Obj,2)./1000;
+    norm_fv_Obj = mean(fv_Obj,2)./ScaleObjFunVal;
     fprintf('           normInf(Obj_f%02d) = %e\n', [1:NoObj; norm_fv_Obj'])
     %
     if PlotIt
@@ -229,6 +229,5 @@ elseif NoObj == 0 && (sum(sum(fv_Con <= 0,1))/NoP == (NoIeq + NoEq))
                             % constrains are met
     ExitFlag = 2;
     return
-elseif norm_fv_Obj(1)
 end
 end

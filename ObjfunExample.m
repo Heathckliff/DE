@@ -31,6 +31,7 @@ if nargin == 0
     ObjInfo.NoEq = 0;               % Number of Equalilty constrains
     ObjInfo.x_b_min = -100*ones(ObjInfo.NoD,1);
     ObjInfo.x_b_max = 100*ones(ObjInfo.NoD,1);
+    ObjInfo.ScaleObjFunVal = 1;     % Scale the value of the Object functions, NoObj-by-1
     % dummy return values when this section call
     fv_Obj = [];
     fv_Con = [];
